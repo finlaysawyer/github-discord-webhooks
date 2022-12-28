@@ -14,18 +14,15 @@ export interface DiscordState {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method !== "POST") {
-      return new Response(
-        JSON.stringify({ error: "Only POST method is supported." }),
-      );
+      return new Response(JSON.stringify({ error: "Only POST method is supported." }));
     }
 
     let workflowEvent: WorkflowRunEvent | null = null;
     try {
       workflowEvent = await request.json();
+      console.log(workflowEvent);
     } catch (err) {
-      return new Response(
-        JSON.stringify({ error: "Malformed or missing JSON." }),
-      );
+      return new Response(JSON.stringify({ error: "Malformed or missing JSON." }));
     }
 
     // Check for an existing Discord message that we can update instead of posting a new one
@@ -36,19 +33,13 @@ export default {
       .first();
 
     if (workflowMessageState != undefined) {
-      console.log(
-        `Existing run found, updating message: ${workflowMessageState}`,
-      );
+      console.log(`Existing run found, updating message: ${JSON.stringify(workflowMessageState)}`);
       await sendWebhook(env, workflowEvent, workflowMessageState.MessageID);
     } else {
-      console.log(
-        "No `MessageID` stored for this workflow run, sending a new message.",
-      );
+      console.log("No `MessageID` stored for this workflow run, sending a new message.");
       const webhookResponse = await sendWebhook(env, workflowEvent);
 
-      await env.DB.prepare(
-        "INSERT INTO DiscordWebhook (MessageID, WorkflowRunID) VALUES (?, ?)",
-      )
+      await env.DB.prepare("INSERT INTO DiscordWebhook (MessageID, WorkflowRunID) VALUES (?, ?)")
         .bind(webhookResponse.id, workflowEvent?.workflow_run.id.toString())
         .run();
     }
@@ -64,11 +55,7 @@ export default {
   },
 };
 
-async function sendWebhook(
-  env: Env,
-  workflowEvent: WorkflowRunEvent | null,
-  messageId?: string,
-) {
+async function sendWebhook(env: Env, workflowEvent: WorkflowRunEvent | null, messageId?: string) {
   /**
    * Sends or updates a Discord Webhook via the API.
    * @param env Worker environment variables
@@ -81,18 +68,28 @@ async function sendWebhook(
     url = `${env.DISCORD_WEBHOOK}/messages/${messageId}?wait=true`;
   }
 
-  // TODO: Support colours and info for workflow failures
   const colours = {
-    requested: 0xffffff,
-    in_progress: 0xe1d71a,
-    completed: 0x23cb1d,
+    success: 0x009944,
+    failure: 0xcf000f,
+    timed_out: 0xf0541e,
+    action_required: 0xf0541e,
+    stale: 0xf0541e,
+    neutral: 0x5b5b5b,
+    cancelled: 0x5b5b5b,
+    skipped: 0x5b5b5b,
   };
 
   let embedColour = 0xffffff;
 
-  if (workflowEvent?.action !== undefined) {
-    embedColour = colours[workflowEvent.action];
+  if (
+    workflowEvent?.workflow_run.status === "completed" &&
+    workflowEvent.workflow_run.conclusion != null
+  ) {
+    embedColour = colours[workflowEvent.workflow_run.conclusion];
   }
+
+  const shortGitSha = workflowEvent?.workflow_run.head_commit.id.substring(0, 7);
+  const gitCommitUrl = `${workflowEvent?.workflow_run.repository.html_url}/commit/${workflowEvent?.workflow_run.head_commit.id}`;
 
   const resp = await fetch(url, {
     method: messageId ? "PATCH" : "POST",
@@ -104,7 +101,6 @@ async function sendWebhook(
         {
           type: "rich",
           title: `[${workflowEvent?.repository.full_name}] Workflow ${workflowEvent?.workflow_run.name} triggered by ${workflowEvent?.workflow_run.actor.login} is ${workflowEvent?.workflow_run.status} on branch ${workflowEvent?.workflow_run.head_branch}`,
-          description: `**Trigger**: \`${workflowEvent?.workflow_run.event}\`\n**Status**: ${workflowEvent?.workflow_run.status}\n**Conclusion**: ${workflowEvent?.workflow_run.conclusion}\n**Commit**: ${workflowEvent?.workflow_run.head_sha}`,
           color: embedColour,
           author: {
             name: workflowEvent?.workflow_run.actor.login,
@@ -112,6 +108,41 @@ async function sendWebhook(
             icon_url: workflowEvent?.workflow_run.actor.avatar_url,
           },
           url: workflowEvent?.workflow_run.html_url,
+          fields: [
+            {
+              name: "Status",
+              value:
+                workflowEvent?.workflow_run.status == "completed"
+                  ? `completed - ${workflowEvent?.workflow_run.conclusion}`
+                  : workflowEvent?.workflow_run.status,
+              inline: true,
+            },
+            {
+              name: "Commit",
+              value: `[\`${shortGitSha}\`](${gitCommitUrl}) ${workflowEvent?.workflow_run.head_commit.message}`,
+              inline: true,
+            },
+            {
+              name: "Trigger",
+              value: workflowEvent?.workflow_run.event,
+              inline: true,
+            },
+            {
+              name: "Run Started",
+              value: workflowEvent?.workflow_run.created_at,
+              inline: true,
+            },
+            {
+              name: "Run Updated",
+              value: workflowEvent?.workflow_run.updated_at,
+              inline: true,
+            },
+            {
+              name: "Run Number",
+              value: workflowEvent?.workflow_run.run_number,
+              inline: true,
+            },
+          ],
         },
       ],
     }),
@@ -119,9 +150,7 @@ async function sendWebhook(
 
   const webhookResp: APIMessage = await resp.json();
   console.log(
-    `Discord returned ${resp.status} ${
-      resp.statusText
-    } with body ${JSON.stringify(webhookResp)}`,
+    `Discord returned ${resp.status} ${resp.statusText} with body ${JSON.stringify(webhookResp)}`,
   );
   return webhookResp;
 }
