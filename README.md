@@ -2,14 +2,14 @@
 
 # github-discord-webhooks
 
-A serverless function running on [Cloudflare Workers](https://workers.cloudflare.com/) and [D1](https://developers.cloudflare.com/d1/) that delivers enhanced GitHub Workflow webhooks for Discord. 
+A serverless function running on [Cloudflare Workers](https://workers.cloudflare.com/) and [D1](https://developers.cloudflare.com/d1/) that delivers enhanced GitHub Workflow webhooks for Discord.
 
 ## Features
 
-* More information about the running Workflow, author and commit information
-* Messages are edited as workflow events come through, reducing spam:
+- More information about the running Workflow, author and commit information
+- Messages are edited as workflow events come through, reducing spam:
 
-    ![demo](https://user-images.githubusercontent.com/18363677/209872272-5b7324bf-92f6-4380-b5a5-f503053ae73e.gif)
+  ![demo](https://user-images.githubusercontent.com/18363677/209872272-5b7324bf-92f6-4380-b5a5-f503053ae73e.gif)
 
 # Installation
 
