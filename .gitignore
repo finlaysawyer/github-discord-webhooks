@@ -1,0 +1,7 @@
+.idea
+venv
+.wrangler
+wrangler.toml
+node_modules
+*.http
+.dev.vars
