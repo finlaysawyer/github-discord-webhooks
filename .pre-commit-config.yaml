@@ -1,0 +1,25 @@
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+        exclude_types: ["map"]
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.0.0-alpha.4
+    hooks:
+      - id: prettier
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.30.0
+    hooks:
+      - id: eslint
+        files: \.[jt]sx?$
+        types: [file]
+        additional_dependencies:
+          - "eslint@8.30.0"
+          - "@typescript-eslint/eslint-plugin@5.47.1"
+          - "@typescript-eslint/parser@5.47.1"
