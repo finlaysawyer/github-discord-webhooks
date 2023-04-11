@@ -20,6 +20,6 @@ repos:
         files: \.[jt]sx?$
         types: [file]
         additional_dependencies:
-          - "eslint@8.37.0"
-          - "@typescript-eslint/eslint-plugin@5.57.1"
-          - "@typescript-eslint/parser@5.57.1"
+          - "eslint@8.38.0"
+          - "@typescript-eslint/eslint-plugin@5.58.0"
+          - "@typescript-eslint/parser@5.58.0"
